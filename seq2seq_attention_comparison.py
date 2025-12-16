@@ -265,23 +265,25 @@ def loss_function(real, pred, loss_object):
 
 
 @tf.function
-def train_step(inp, targ, enc_hidden, encoder, decoder, targ_lang, 
-               optimizer, loss_object):
+def train_step(inp, targ, enc_hidden, encoder, decoder, start_token_id, 
+               optimizer, loss_object, max_length_targ):
     """Single training step"""
-    loss = 0
+    loss = tf.constant(0.0)
+    batch_size = tf.shape(inp)[0]
     
     with tf.GradientTape() as tape:
         enc_output, enc_hidden = encoder(inp, enc_hidden)
         dec_hidden = enc_hidden
-        dec_input = tf.expand_dims([targ_lang.word_index['<start>']] * inp.shape[0], 1)
+        # Use the pre-computed start_token_id instead of accessing targ_lang inside tf.function
+        dec_input = tf.fill([batch_size, 1], start_token_id)
         
-        # Teacher forcing
-        for t in range(1, targ.shape[1]):
+        # Teacher forcing - use tf.range for graph compatibility
+        for t in tf.range(1, max_length_targ):
             predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)
             loss += loss_function(targ[:, t], predictions, loss_object)
             dec_input = tf.expand_dims(targ[:, t], 1)
     
-    batch_loss = (loss / int(targ.shape[1]))
+    batch_loss = loss / tf.cast(max_length_targ - 1, tf.float32)
     variables = encoder.trainable_variables + decoder.trainable_variables
     gradients = tape.gradient(loss, variables)
     optimizer.apply_gradients(zip(gradients, variables))
@@ -290,12 +292,15 @@ def train_step(inp, targ, enc_hidden, encoder, decoder, targ_lang,
 
 
 def train_model(encoder, decoder, dataset, targ_lang, epochs, batch_size, 
-                steps_per_epoch, model_name="model"):
+                steps_per_epoch, max_length_targ, model_name="model"):
     """Train a model and return training history"""
     optimizer = tf.keras.optimizers.Adam()
     loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
         from_logits=True, reduction='none'
     )
+    
+    # Pre-compute start token ID for use inside tf.function
+    start_token_id = targ_lang.word_index['<start>']
     
     # Checkpoint setup
     checkpoint_dir = f'./training_checkpoints_{model_name}'
@@ -318,7 +323,7 @@ def train_model(encoder, decoder, dataset, targ_lang, epochs, batch_size,
         
         for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epoch)):
             batch_loss = train_step(inp, targ, enc_hidden, encoder, decoder,
-                                   targ_lang, optimizer, loss_object)
+                                   start_token_id, optimizer, loss_object, max_length_targ)
             total_loss += batch_loss
             
             if batch % 100 == 0:
@@ -588,7 +593,7 @@ def main():
     
     history_bahdanau = train_model(
         encoder_bahdanau, decoder_bahdanau, dataset, targ_lang,
-        EPOCHS, BATCH_SIZE, steps_per_epoch, model_name="bahdanau"
+        EPOCHS, BATCH_SIZE, steps_per_epoch, max_length_targ, model_name="bahdanau"
     )
     
     # =================================================================
@@ -605,7 +610,7 @@ def main():
     
     history_luong = train_model(
         encoder_luong, decoder_luong, dataset, targ_lang,
-        EPOCHS, BATCH_SIZE, steps_per_epoch, model_name="luong"
+        EPOCHS, BATCH_SIZE, steps_per_epoch, max_length_targ, model_name="luong"
     )
     
     # =================================================================

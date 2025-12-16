@@ -6,7 +6,7 @@
 2. **seq2seq_attention_comparison.ipynb** - Jupyter notebook (recommended)
 3. **Implementation documentation** - Plan and walkthrough
 
-## How to Run
+## How to Run 
 
 ### Recommended: Use Jupyter Notebook
 
