@@ -28,6 +28,17 @@ This project implements and compares two foundational attention mechanisms in se
 
 Both models are trained on an **English-Portuguese translation task** using identical hyperparameters, enabling a fair side-by-side comparison of their performance characteristics.
 
+## 📚 Documentation
+
+**[View Full Documentation →](docs/index.md)**
+
+Comprehensive guides covering:
+- [Installation & Quickstart](docs/getting-started/installation.md)
+- [Theory: Attention Mechanisms](docs/theory/attention-mechanisms.md)
+- [API Reference](docs/api/overview.md)
+- [Tutorials](docs/tutorials/training-custom-data.md)
+- [Results & Analysis](docs/results/performance-analysis.md)
+
 ## ✨ Features
 
 - 🔄 **Complete Seq2Seq Implementation** - Encoder-Decoder architecture with GRU cells
